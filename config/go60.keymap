@@ -2,6 +2,11 @@
  * Copyright (c) 2020 The ZMK Contributors
  *
  * SPDX-License-Identifier: MIT
+ *
+ * Go60 keymap ported from the authoritative Glove80 source
+ * https://github.com/ai212983/glove80 at origin/main commit
+ * 8c2660d31894c59b61eb14e97ef6211ae06041ac.
+ * See MIGRATION.md for provenance and the full move list.
  */
 
 #include <behaviors.dtsi>
@@ -19,10 +24,50 @@
 
 // layers
 #define LAYER_Base 0
-#define LAYER_Keypad 1
-#define LAYER_SymbolNav 2
+#define LAYER_Russian 1
+#define LAYER_NavNum 2
 #define LAYER_Magic 3
 #define LAYER_Factory 4
+#define LAYER_Symbols 5
+
+/* Imported from Glove80 source: mod-combos and host keys */
+#define HYPR LC(RS(LA(LGUI)))
+#define MEH LC(RS(LALT))
+
+#define PRV_SPC F13
+#define NXT_SPC F14
+#define MSN_CTL F15
+#define APP_LNC F16
+#define APP_SWT F17
+
+#define PSWD F18
+
+#define PRV_TAB LA(LG(LEFT))
+#define NXT_TAB LA(LG(RIGHT))
+
+#define HOST_OS 2  // set to 2 for macOS/Windows-Alt-Codes, default is 0 (Windows)
+
+#include "helper.h"
+#include "international_chars/russian.dtsi"
+
+
+// bind keys swap to LEFT shift, so they do not intefere with MEH/HYPER
+#define L_MODMORPH(name, uc_binding, shifted_uc_binding) \
+    / { \
+        behaviors { \
+            name: name { \
+                compatible = "zmk,behavior-mod-morph"; \
+                label = ZMK_HELPER_STRINGIFY(L_MORPH_ ## name); \
+                #binding-cells = <0>; \
+                bindings = <uc_binding>, <shifted_uc_binding>; \
+                mods = <(MOD_LSFT)>; \
+            }; \
+        }; \
+    };
+
+L_MODMORPH(dqt_sqt, &kp DQT, &kp SQT)
+L_MODMORPH(gra_til, &kp GRAVE, &kp TILDE)
+
 
 / {
     input_processors {
@@ -41,20 +86,6 @@
             flavor = "tap-preferred";
             tapping-term-ms = <200>;
             bindings = <&mo>, <&rgb_ug_status_macro>;
-        };
-
-        keypad_td: keypad_td {
-            compatible = "zmk,behavior-tap-dance";
-            #binding-cells = <0>;
-            tapping-term-ms = <200>;
-            bindings = <&mo LAYER_Keypad>, <&to LAYER_Keypad>;
-        };
-
-        symbol_nav_td: symbol_nav_td {
-            compatible = "zmk,behavior-tap-dance";
-            #binding-cells = <0>;
-            tapping-term-ms = <200>;
-            bindings = <&mo LAYER_SymbolNav>, <&to LAYER_SymbolNav>;
         };
 
         bt_0: bt_0 {
@@ -124,34 +155,52 @@
         compatible = "zmk,keymap";
         layer_Base {
             bindings = <
-            &kp EQUAL  &kp N1     &kp N2   &kp N3    &kp N4  &kp N5                                                      &kp N6    &kp N7     &kp N8    &kp N9    &kp N0           &kp MINUS
-              &kp TAB   &kp Q      &kp W    &kp E     &kp R   &kp T                                                       &kp Y     &kp U      &kp I     &kp O     &kp P            &kp BSLH
-              &kp ESC   &kp A      &kp S    &kp D     &kp F   &kp G                                                       &kp H     &kp J      &kp K     &kp L  &kp SEMI             &kp SQT
- &magic LAYER_Magic 0   &kp Z      &kp X    &kp C     &kp V   &kp B                                                       &kp N     &kp M  &kp COMMA   &kp DOT  &kp FSLH          &keypad_td
-                               &kp GRAVE  &kp DEL  &kp BSPC                                                                      &kp LGUI   &kp LBKT  &kp RBKT
-                                                     &symbol_nav_td  &kp LSHFT  &kp LCTRL     &kp LALT  &kp SPACE  &mt RALT RET
+// num row (source number row; left outer &none -> Magic, right outer is source PSWD)
+&magic LAYER_Magic 0  &kp N1     &kp N2   &kp N3    &kp N4  &kp N5                                                      &kp N6    &kp N7     &kp N8    &kp N9    &kp N0           &kp PSWD
+// main row 2 (source Q-row)
+              &none   &kp Q      &kp D    &kp R     &kp W   &kp B                                                       &kp J     &kp F      &kp U     &kp P     &kp SEMI          &kp BSLH
+// main row 3 (source home row)
+           &kp HYPR   &kp A      &kp S    &kp H     &kp T   &kp G                                                       &kp Y     &kp N      &kp E     &kp O     &kp I           &dqt_sqt
+// main row 4 (source Z-row mains)
+          &kp LSHFT   &kp Z      &kp X    &kp M     &kp C   &kp V                                                       &kp K     &kp L  &kp COMMA   &kp DOT  &kp FSLH          &gra_til
+// lower extra (source bottom C4/C3/C2; outer &none -> LCTRL / tog Russian)
+                            &kp LCTRL  &kp LEFT  &kp RIGHT                                                                      &kp UP   &kp DOWN      &tog LAYER_Russian
+// thumbs (source T4/T5/T6; <3 SPACE remapped to Symbols=5)
+                                                     &mt LGUI ESC  &lt LAYER_NavNum BSPC  &mt LCTRL DEL     &mt MEH TAB  &lt LAYER_Symbols SPACE  &mt LALT RET
             >;
         };
 
-        layer_Keypad {
+        layer_Russian {
             bindings = <
-                &none     &kp F1     &kp F2     &kp F3     &kp F4         &kp F5                                                 &kp F6     &kp F7      &kp F8        &kp F9          &kp F10        &kp F11
-               &trans      &none   &kp HOME     &kp UP    &kp END      &kp PG_UP                                              &kp KP_N7  &kp KP_N8   &kp KP_N9  &kp KP_MINUS     &kp KP_SLASH        &kp F12
-               &trans  &kp LC(Y)   &kp LEFT   &kp DOWN  &kp RIGHT      &kp PG_DN                                              &kp KP_N4  &kp KP_N5   &kp KP_N6   &kp KP_PLUS  &kp KP_MULTIPLY     &kp KP_NUM
- &magic LAYER_Magic 0  &kp LC(Z)  &kp LC(X)  &kp LC(C)  &kp LC(V)  &kp LS(LC(V))                                              &kp KP_N1  &kp KP_N2   &kp KP_N3  &kp KP_ENTER        &kp EQUAL &to LAYER_Base
-                                      &none     &trans     &trans                                                                        &kp KP_N0  &kp KP_DOT      &kp BSPC
-                                                             &mo LAYER_SymbolNav  &trans  &trans              &trans  &trans  &kp KP_N0
+// num row (left outer &trans keeps Magic reachable via fallthrough; right outer is source PSWD)
+               &trans    &trans     &trans   &trans    &trans  &trans                                                        &trans    &trans     &trans    &trans    &trans           &kp PSWD
+// main row 2
+               &ru_c     &ru_ch      &kp A   &ru_k     &ru_y   &ru_m                                                         &ru_v     &ru_l      &ru_z     &ru_sh    &ru_iy            &ru_f
+// main row 3
+              &ru_hs     &ru_p      &ru_i    &ru_o     &ru_e   &ru_u                                                          &kp P    &ru_n      &ru_t     &ru_s     &ru_b            &ru_h
+// main row 4
+              &trans    &ru_ae     &ru_yu   &ru_ss    &ru_ya  &ru_dot                                                      &ru_comm    &ru_g      &ru_d    &ru_zh    &ru_sc          &gra_til
+// lower extra (fallthrough to Base arrows/LCTRL; &to Base exits Russian)
+                               &trans     &trans     &trans                                                                          &trans    &trans      &to LAYER_Base
+// thumbs (source T4/T5/T6 are &trans here)
+                                                              &trans           &trans            &trans              &trans             &trans            &trans
             >;
         };
 
-        layer_SymbolNav {
+        layer_NavNum {
             bindings = <
-              &kp INS    &kp F1     &kp F2    &kp F3     &kp F4     &kp F5                                       &kp F6    &kp F7           &kp F8       &kp F9          &kp F10    &kp F11
-             &kp SLCK  &kp EXCL   &kp HOME    &kp UP    &kp END  &kp PG_UP                                     &kp LPAR  &kp RPAR           &kp UP    &kp PRCNT        &kp K_APP    &kp F12
-             &kp CAPS    &kp AT   &kp LEFT  &kp DOWN  &kp RIGHT  &kp PG_DN                                     &kp DLLR  &kp LEFT         &kp DOWN    &kp RIGHT  &kp PAUSE_BREAK  &kp PSCRN
- &magic LAYER_Magic 0  &kp HASH   &kp LBKT  &kp RBKT   &kp LBRC   &kp RBRC                                     &kp AMPS  &kp STAR        &kp UNDER     &kp PLUS        &kp LSHFT  &kp LCTRL
-                                 &kp CARET    &trans     &trans                                                            &trans  &kp LC(LS(TAB))  &kp LC(TAB)
-                                                            &to LAYER_Base  &trans  &trans       &trans  &trans  &trans
+// num row (source F-row discarded; number row all &none)
+                &none     &none     &none    &none    &none     &none                                                          &none     &none      &none     &none       &none            &none
+// main row 2
+                &none     &none   &kp HOME   &kp UP   &kp END  &kp PG_UP                                                    &kp PRCNT  &kp KP_N7  &kp KP_N8 &kp KP_N9  &kp KP_MULTIPLY  &kp KP_DIVIDE
+// main row 3
+               &trans     &none   &kp LEFT &kp DOWN &kp RIGHT  &kp PG_DN                                                      &none  &kp KP_N4  &kp KP_N5 &kp KP_N6   &kp KP_MINUS        &none
+// main row 4
+               &trans     &none     &none    &none    &none     &none                                                       &kp KP_N0 &kp KP_N1  &kp KP_N2 &kp KP_N3    &kp KP_PLUS    &kp KP_ENTER
+// lower extra
+                                 &none     &trans     &trans                                                                          &trans    &trans   &kp KP_DOT
+// thumbs (source T4/T5/T6)
+                                                           &kp LALT            &trans         &kp LCTRL               &trans             &trans     &kp LA(RET)
             >;
         };
 
@@ -174,6 +223,23 @@
  &kp N3  &kp N7  &kp N1  &kp N6  &kp N1  &kp N6                                       &kp N6  &kp N1  &kp N6  &kp N1  &kp N7  &kp N3
                  &kp N2  &kp N7  &kp N2                                                       &kp N2  &kp N7  &kp N2
                                           &kp N7  &kp N8  &kp N9      &kp N9  &kp N8  &kp N7
+            >;
+        };
+
+        layer_Symbols {
+            bindings = <
+// num row (source F1..F10; F11/F12 on spare outer keys)
+              &kp F11     &kp F1     &kp F2    &kp F3     &kp F4     &kp F5                                       &kp F6    &kp F7           &kp F8       &kp F9          &kp F10    &kp F12
+// main row 2 (remote arrangement; left outer &none -> relocated plain LALT lost from source extra thumb)
+              &kp LALT    &kp EXCL   &kp AT    &kp HASH   &kp DLLR    &kp PRCNT                             &kp PRV_SPC &kp NXT_SPC &kp LBKT &kp RBKT &kp LS(N6)  &kp APP_LNC
+// main row 3 (remote arrangement)
+               &trans     &none    &none    &kp PLUS  &kp MINUS    &kp EQUAL                                &kp PRV_TAB &kp NXT_TAB &kp LS(N9) &kp LS(N0) &kp LS(N8)  &kp APP_SWT
+// main row 4 (remote arrangement; spare &none -> relocated plain LSHFT)
+               &trans     &none    &none     &none   &kp UNDER     &none                                    &kp AMPS &kp GRAVE &kp LS(LBKT) &kp LS(RBKT) &kp LSHFT  &kp MSN_CTL
+// lower extra
+                                 &none     &trans     &trans                                                              &trans      &trans       &none
+// thumbs (source T4/T5/T6 are &trans here)
+                                                              &trans           &trans            &trans              &trans             &trans            &trans
             >;
         };
     };
